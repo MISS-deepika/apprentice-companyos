@@ -1,0 +1,3 @@
+{"id": "ops-01", "name": "Operations Analyst", "role": "Operations Analyst",
+ "permissions": ["invoices.read", "policy.read", "inbox.read", "vendors.read"],
+ "approval_limit": 0}

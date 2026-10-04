@@ -1,0 +1,3 @@
+{"id": "finance-01", "name": "Finance Operations Employee", "role": "Finance Operations",
+ "permissions": ["invoices.read", "policy.read", "inbox.read", "payments.schedule"],
+ "approval_limit": 50000}

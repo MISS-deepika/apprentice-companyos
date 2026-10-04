@@ -1,0 +1,3 @@
+{"id": "finance-junior-01", "name": "Junior Finance Clerk", "role": "Junior Finance Clerk",
+ "permissions": ["invoices.read", "policy.read", "inbox.read", "payments.schedule"],
+ "approval_limit": 20000}

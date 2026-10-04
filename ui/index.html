@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apprentice - a self-improving, verifiable AI employee</title>
+<style>
+  :root {
+    --paper:#eef0ec; --card:#fbfcfa; --ink:#17252a; --mute:#5d6b69; --rule:#c5ccc6;
+    --green:#1d6b52; --blue:#2d5da8; --teal:#0e7c86; --amber:#a85f00; --red:#b0302a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 var(--sans); }
+  header { padding:22px 28px 14px; border-bottom:1px solid var(--rule); display:flex; gap:24px; align-items:baseline; flex-wrap:wrap; }
+  h1 { margin:0; font-size:26px; letter-spacing:-.01em; }
+  header p { margin:0; color:var(--mute); max-width:62ch; }
+  main { display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); gap:20px; padding:20px 28px 40px; }
+  @media (max-width: 960px){ main{ grid-template-columns:1fr; padding:16px; } header{padding:16px;} }
+  section { background:var(--card); border:1px solid var(--rule); border-radius:6px; padding:16px 18px; margin-bottom:20px; }
+  h2 { margin:0 0 10px; font-size:16px; }
+  .sub { color:var(--mute); font-size:13px; margin:-6px 0 10px; }
+  textarea { width:100%; min-height:62px; font:inherit; padding:9px 10px; border:1px solid var(--rule); border-radius:4px; background:#fff; resize:vertical; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  button { font:inherit; padding:7px 14px; border-radius:4px; border:1px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--ink); border-color:var(--rule); }
+  button.small { padding:3px 9px; font-size:13px; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button:focus-visible, textarea:focus-visible, input:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .timeline { font-family:var(--mono); font-size:13px; max-height:360px; overflow:auto; }
+  .ev { display:grid; grid-template-columns:48px 78px 1fr; gap:8px; padding:3px 0 3px 8px; border-left:3px solid var(--rule); margin-bottom:2px; }
+  .ev .t { color:var(--mute); } .ev .k { font-weight:600; }
+  .ev.step{border-color:var(--blue)} .ev.step .k{color:var(--blue)}
+  .ev.verify{border-color:var(--green)} .ev.verify .k{color:var(--green)}
+  .ev.learn{border-color:var(--teal)} .ev.learn .k{color:var(--teal)}
+  .ev.repair,.ev.approval{border-color:var(--amber)} .ev.repair .k,.ev.approval .k{color:var(--amber)}
+  .ev.error,.ev.security{border-color:var(--red)} .ev.error .k,.ev.security .k{color:var(--red)}
+  .ev.permission{border-color:var(--amber)} .ev.permission .k{color:var(--amber)}
+  .ev.delegate{border-color:var(--teal)} .ev.delegate .k{color:var(--teal)}
+  .ev.info .k { color:var(--mute); }
+  .passport{border:1px dashed var(--ink);border-radius:6px;padding:10px 12px;margin-top:10px;font-size:13px;background:#fff}
+  .passport b.id{font-family:var(--mono)} .passport .yes{color:var(--green)} .passport .no{color:var(--red)}
+  .passport ul{list-style:none;margin:4px 0;padding:0} .passport .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ledger { width:100%; border-collapse:collapse; font-size:13px; }
+  .ledger td, .ledger th { padding:5px 6px; border-bottom:1px solid var(--rule); text-align:left; vertical-align:middle; }
+  .ledger th { font-weight:600; color:var(--mute); }
+  .bar { height:14px; background:var(--blue); min-width:2px; border-radius:2px; display:inline-block; vertical-align:middle; }
+  .bar.replay{background:var(--teal)} .bar.repair{background:var(--amber)} .bar.fallback{background:var(--red)}
+  .num { font-family:var(--mono); }
+  .tag { font-size:12px; padding:1px 7px; border-radius:10px; color:#fff; background:var(--blue); }
+  .tag.replay{background:var(--teal)} .tag.repair{background:var(--amber)} .tag.fallback{background:var(--red)}
+  ul.checks { list-style:none; margin:0; padding:0; }
+  .checks li { padding:4px 0; border-bottom:1px solid var(--rule); display:grid; grid-template-columns:22px 1fr; gap:6px; }
+  .checks .ok{color:var(--green);font-weight:700} .checks .bad{color:var(--red);font-weight:700} .checks .appr{color:var(--amber);font-weight:700}
+  .checks small { display:block; color:var(--mute); }
+  table.diff { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12.5px; }
+  .diff td { padding:4px 6px; border-bottom:1px solid var(--rule); }
+  .diff .add { background:#e3f1ea; } .diff .chg { background:#fbf0dc; } .diff .del { background:#f6e1df; }
+  pre { background:#fff; border:1px solid var(--rule); border-radius:4px; padding:10px; overflow:auto; font:12px/1.45 var(--mono); max-height:260px; margin:6px 0 0; }
+  img.shot { max-width:100%; border:1px solid var(--rule); border-radius:4px; margin-top:8px; }
+  .banner { padding:8px 10px; border-radius:4px; margin-top:10px; font-size:14px; }
+  .banner.warn { background:#fbf0dc; border:1px solid #e3c486; } .banner.good { background:#e3f1ea; border:1px solid #9ccab4; }
+  .banner.bad { background:#f6e1df; border:1px solid #dba6a2; }
+  .empty { color:var(--mute); font-style:italic; }
+  label.inline { display:inline-flex; gap:6px; align-items:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Apprentice</h1>
+  <p>An AI employee that does a task once, proves it worked, turns it into a skill, and repairs that skill when the company's software changes. Everything it does happens on a sandbox branch until a human merges it.</p>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Give it a business goal</h2>
+      <p class="sub">State the outcome, not the steps.</p>
+      <textarea id="task" aria-label="Task">Schedule Acme's approved invoice</textarea>
+      <div class="row"><label class="inline"><b>Run as</b> <select id="employee" aria-label="AI employee"></select></label></div>
+      <div id="passport"></div>
+      <div class="chips" id="chips"></div>
+      <div class="row">
+        <button id="run">Run task</button>
+        <label class="inline"><input type="checkbox" id="chaos"> Company redesigned its UI (renames the Pay button)</label>
+        <label class="inline"><input type="checkbox" id="redteam"> Red-team test: use a deliberately gullible model (proves the code gate)</label>
+        <button class="ghost small" id="reset" style="margin-left:auto">Reset demo</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>What the worker is doing</h2>
+      <div class="timeline" id="timeline"><span class="empty">No run yet.</span></div>
+      <div id="banner"></div>
+    </section>
+
+    <section>
+      <h2>Proposed changes</h2>
+      <p class="sub">The state difference between the sandbox branch and the live company database.</p>
+      <div id="diff"><span class="empty">Nothing to review.</span></div>
+      <div id="mergebox"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Run ledger</h2>
+      <p class="sub">Model calls per run. Learned skills should make this fall, and stay low after a repair.</p>
+      <div id="ledger"><span class="empty">Runs will appear here.</span></div>
+    </section>
+
+    <section>
+      <h2>Independent verification</h2>
+      <p class="sub">Checked against the database, not against what the agent said.</p>
+      <div id="verify"><span class="empty">Runs appear here after execution.</span></div>
+      <div id="shot"></div>
+    </section>
+
+    <section>
+      <h2>Learned skills</h2>
+      <p class="sub">Plain JSON you can read and audit.</p>
+      <div id="skills"><span class="empty">No skills yet. Run a task once.</span></div>
+    </section>
+
+    <section>
+      <h2>Control plane</h2>
+      <p class="sub">One runtime, several governed AI employees. Every number is computed from recorded runs and the audit trail.</p>
+      <div id="control"><span class="empty">No runs yet.</span></div>
+      <div id="audit"></div>
+    </section>
+
+    <section>
+      <h2>Live company database</h2>
+      <p class="sub">Changes only when you merge.</p>
+      <div id="main"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const PRESETS = [
+  ["Acme", "Schedule Acme's approved invoice"],
+  ["Zenith Corp", "Schedule Zenith Corp's approved invoice"],
+  ["Nimbus Tech", "Schedule Nimbus Tech's approved invoice"],
+  ["Kestrel Labs", "Schedule Kestrel Labs's approved invoice"],
+  ["Harbor Foods", "Schedule Harbor Foods's approved invoice"],
+  ["Lumen Textiles", "Schedule Lumen Textiles's approved invoice"],
+  ["Cobalt Traders (30,000)", "Schedule Cobalt Traders's approved invoice"],
+  ["Orbit Supplies (over limit)", "Schedule Orbit Supplies's approved invoice"],
+  ["Urgent inbox email", "Handle the urgent email in the inbox"],
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let current = null, timer = null;
+
+PRESETS.forEach(([label, text]) => {
+  const b = document.createElement("button"); b.className = "ghost small"; b.textContent = label;
+  b.onclick = () => $("task").value = text; $("chips").appendChild(b);
+});
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+$("run").onclick = async () => {
+  try {
+    $("run").disabled = true;
+    const {id} = await api("/api/run", {task:$("task").value, chaos:$("chaos").checked ? "ui_shift" : "", redteam:$("redteam").checked, employee:$("employee").value});
+    current = id; poll();
+  } catch (e) { alert(e.message); $("run").disabled = false; }
+};
+$("reset").onclick = async () => {
+  if (!confirm("Reset company data, learned skills and the run ledger?")) return;
+  try { await api("/api/reset", {everything:true}); } catch (e) { return alert(e.message); }
+  current = null; $("timeline").innerHTML = '<span class="empty">No run yet.</span>'; ["diff","verify","shot","banner","mergebox"].forEach(i => $(i).innerHTML = "");
+  refreshSide();
+};
+
+function poll() {
+  clearInterval(timer);
+  timer = setInterval(async () => {
+    const run = await api("/api/runs/" + current);
+    render(run);
+    if (run.status !== "running") { clearInterval(timer); $("run").disabled = false; refreshSide(); }
+  }, 600);
+}
+
+function render(run) {
+  $("timeline").innerHTML = run.events.map(e =>
+    `<div class="ev ${e.type}"><span class="t">${e.t}s</span><span class="k">${e.type}</span><span>${esc(e.text)}</span></div>`).join("")
+    || '<span class="empty">Starting...</span>';
+  $("timeline").scrollTop = 1e6;
+  const done = run.status !== "running";
+  if (run.verification) {
+    $("verify").innerHTML = '<ul class="checks">' + run.verification.checks.map(c => {
+      const cls = c.ok ? "ok" : (c.level === "approval" ? "appr" : "bad");
+      return `<li><span class="${cls}">${c.ok ? "✓" : (c.level === "approval" ? "!" : "✕")}</span><span>${esc(c.name)}<small>${esc(c.detail)}</small></span></li>`;
+    }).join("") + "</ul>";
+  }
+  $("shot").innerHTML = run.screenshot ? `<img class="shot" src="${run.screenshot}?t=${Date.now()}" alt="Final browser state">` : "";
+  $("diff").innerHTML = run.diff && run.diff.length ? renderDiff(run.diff) : (done ? '<span class="empty">The run changed no data.</span>' : '<span class="empty">Nothing to review.</span>');
+  const b = {merged:["good","Merged into the live database and re-verified."], awaiting_merge:["warn","Verified on the branch. Review the changes, then merge."],
+    failed:["bad","Not verified. Nothing can be merged. The branch was discarded."], done_no_changes:["good","Finished safely. No data was changed. " + (run.summary || "")],
+    rejected:["warn","Rejected. Branch discarded."], conflict:["bad","Merge conflict. Rerun the task."], reverted:["bad","Post-merge check failed. Changes were reverted automatically."]}[run.status];
+  $("banner").innerHTML = b ? `<div class="banner ${b[0]}">${esc(b[1])}</div>` : "";
+  renderMerge(run);
+}
+
+function renderDiff(d) {
+  return '<table class="diff">' + d.map(c => {
+    if (c.op === "update") {
+      const ch = Object.keys(c.after).filter(k => c.after[k] !== c.before[k]).map(k => `${k}: ${esc(c.before[k])} → <b>${esc(c.after[k])}</b>`).join(", ");
+      return `<tr class="chg"><td>~ ${c.table}[${c.pk}]</td><td>${ch}</td></tr>`;
+    }
+    const row = c.op === "insert" ? c.after : c.before;
+    return `<tr class="${c.op === "insert" ? "add" : "del"}"><td>${c.op === "insert" ? "+" : "−"} ${c.table}[${c.pk}]</td><td>${esc(JSON.stringify(row))}</td></tr>`;
+  }).join("") + "</table>";
+}
+
+function renderMerge(run) {
+  const box = $("mergebox");
+  if (run.status !== "awaiting_merge") { box.innerHTML = ""; return; }
+  box.innerHTML = (run.needs_elevated ? `<div class="banner warn"><label class="inline"><input type="checkbox" id="elev"> I explicitly approve the payment above INR ${(run.approval_limit || 50000).toLocaleString('en-IN')} (this employee's approval limit)</label></div>` : "") +
+    `<div class="row"><button id="merge">Merge into live database</button><button class="ghost" id="reject">Reject</button></div>`;
+  const m = $("merge");
+  if (run.needs_elevated) { m.disabled = true; $("elev").onchange = e => m.disabled = !e.target.checked; }
+  m.onclick = async () => { const r = await api(`/api/runs/${run.id}/merge`, {elevated: !!($("elev") && $("elev").checked)}); if (!r.ok) alert(r.error); render(await api("/api/runs/" + run.id)); refreshSide(); };
+  $("reject").onclick = async () => { await api(`/api/runs/${run.id}/reject`, {}); render(await api("/api/runs/" + run.id)); };
+}
+
+async function refreshSide() {
+  const [m, s, d, c] = await Promise.all([api("/api/metrics"), api("/api/skills"), api("/api/main"), api("/api/control")]);
+  const max = Math.max(1, ...m.map(r => r.llm_calls));
+  $("ledger").innerHTML = m.length ? `<table class="ledger"><tr><th>#</th><th>employee</th><th>mode</th><th>model calls</th><th>s</th><th>verified</th></tr>` + m.map(r =>
+    `<tr title="${esc(r.task)}"><td class="num">${r.run}</td><td>${esc(r.employee || '')}${r.delegated_from ? ' <small>(from ' + esc(r.delegated_from) + ')</small>' : ''}</td><td><span class="tag ${r.mode}">${r.mode}</span></td>
+     <td><span class="bar ${r.mode}" style="width:${Math.max(2, r.llm_calls / max * 120)}px"></span> <span class="num">${r.llm_calls}</span></td>
+     <td class="num">${r.seconds}</td><td>${r.verified ? "✓" : "✕"}</td></tr>`).join("") + "</table>" : '<span class="empty">Runs will appear here.</span>';
+  $("skills").innerHTML = s.length ? s.map(k => `<details><summary><b>${esc(k.name)}</b> v${k.version} · params: ${esc(k.params.join(", ") || "none")} · ${k.stats.verified}/${k.stats.runs} verified · ${k.stats.repairs} repair(s)</summary><pre>${esc(JSON.stringify(k, null, 2))}</pre></details>`).join("") : '<span class="empty">No skills yet. Run a task once.</span>';
+  const pct = v => v === null ? "-" : v + "%";
+  $("control").innerHTML = '<table class="ledger"><tr><th>employee</th><th>limit</th><th>tasks</th><th>verified</th><th>model calls</th><th>blocked</th><th>handoffs</th></tr>' + c.employees.map(e =>
+    `<tr><td><b>${esc(e.id)}</b><br><small>${esc(e.role)}</small></td><td class="num">${e.approval_limit ? e.approval_limit.toLocaleString("en-IN") : "-"}</td><td class="num">${e.tasks}</td><td class="num">${pct(e.verified_pct)}</td><td class="num">${e.model_calls}</td><td class="num" title="policy blocks / permission denials">${e.policy_blocks} / ${e.permission_denials}</td><td class="num" title="received / sent">${e.delegated_in} in, ${e.delegated_out} out</td></tr>`).join("") + "</table>";
+  $("audit").innerHTML = c.audit.length ? '<details><summary>Audit trail (latest ' + c.audit.length + ')</summary><pre>' + c.audit.map(a => `${a.ts}  run ${a.run}  ${a.employee}  ${a.event}  ${a.detail}`).join("\n") + '</pre></details>' : "";
+  $("main").innerHTML = '<table class="ledger"><tr><th>invoice</th><th>vendor</th><th>amount</th><th>status</th></tr>' + d.map(i => `<tr><td class="num">INV-${i.id}</td><td>${esc(i.name)}</td><td class="num">${i.amount.toLocaleString("en-IN")}</td><td>${esc(i.status)}</td></tr>`).join("") + "</table>";
+}
+let EMPS = [];
+function showPassport() {
+  const e = EMPS.find(x => x.id === $("employee").value); if (!e) return;
+  $("passport").innerHTML = `<div class="passport"><b>Employee Passport</b> <b class="id">${esc(e.id)}</b> &middot; ${esc(e.role)} &middot; approval limit ${e.approval_limit ? "INR " + e.approval_limit.toLocaleString("en-IN") : "none (cannot pay)"}
+    <div class="cols"><div><span class="yes">Can</span><ul>${e.can.map(x => "<li>✓ " + esc(x) + "</li>").join("")}</ul></div>
+    <div><span class="no">Cannot</span><ul>${e.cannot.map(x => "<li>✗ " + esc(x) + "</li>").join("")}</ul></div></div></div>`;
+}
+async function loadEmployees() {
+  EMPS = await api("/api/employees");
+  $("employee").innerHTML = EMPS.map(e => `<option value="${esc(e.id)}">${esc(e.id)} - ${esc(e.role)}</option>`).join("");
+  $("employee").onchange = showPassport; showPassport();
+}
+loadEmployees();
+refreshSide();
+</script>
+</body>
+</html>
